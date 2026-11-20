@@ -1,0 +1,18 @@
+{
+  "name": "치이카와 카오스 가챠",
+  "short_name": "치이카와 가챠",
+  "description": "치이카와 뽑기 시뮬레이터",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#fff8fc",
+  "theme_color": "#ff77b7",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
