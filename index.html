@@ -112,6 +112,33 @@
     .result-card{border:1px solid var(--line);border-radius:20px;padding:10px;background:#fff;position:relative}
     .result-card .thumb{height:126px}
     .new{position:absolute;top:8px;right:8px;background:linear-gradient(135deg,#ff7ab8,#ffb27d);color:white;padding:5px 8px;border-radius:999px;font-size:10px;font-weight:900}
+    /* One-screen inline gacha results; no full-screen result overlay. */
+    .inline-results{display:none;width:100%;padding:7px 5px 28px}
+    .inline-results.active{display:block}
+    .machine:has(.inline-results.active){height:auto;min-height:250px;display:block}
+    .machine:has(.inline-results.active) .machine-bubble{display:none}
+    .inline-results-head{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:8px}
+    .inline-results-head b{font-size:15px;color:var(--ink)}
+    .inline-results-head span{font-size:11px;color:var(--muted);font-weight:800}
+    .inline-results .result-grid{grid-template-columns:repeat(5,minmax(0,1fr));gap:5px}
+    .inline-results .result-grid.single{grid-template-columns:minmax(0,155px);justify-content:center;max-width:none}
+    .inline-results .result-card{border-radius:11px;padding:5px;min-width:0}
+    .inline-results .result-card .thumb{height:auto;aspect-ratio:1;margin-bottom:4px;border-radius:8px}
+    .inline-results .result-card .name{font-size:11px;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .inline-results .result-card .tag{font-size:9px;padding:2px 5px}
+    .inline-results .result-card .variant,.inline-results .result-card .meta{display:none}
+    .inline-results .new{font-size:8px;top:3px;right:3px;padding:2px 3px}
+    .inline-results.single-view .result-card .thumb{max-height:220px}
+    .inline-results.single-view .result-card .name{font-size:15px}
+    .inline-results.single-view .result-card .variant{display:block;min-height:0;font-size:11px}
+    .machine:has(.inline-results.active) .machine-note{bottom:1px}
+    @media(max-width:760px){
+      .inline-results .result-grid{grid-template-columns:repeat(5,minmax(0,1fr));gap:3px}
+      .inline-results .result-card{padding:3px;border-radius:7px}
+      .inline-results .result-card .name{font-size:9px}
+      .inline-results .result-card .tag{font-size:8px;padding:1px 3px}
+      .inline-results-head span{font-size:10px}
+    }
     .toast-wrap{position:fixed;right:14px;bottom:14px;z-index:120;display:grid;gap:8px}
     .toast{background:rgba(62,53,80,.95);color:white;padding:12px 14px;border-radius:14px;box-shadow:var(--shadow);font-size:13px;font-weight:800;animation:fade 2.8s ease forwards}
     @keyframes fade{0%{opacity:0;transform:translateY(10px)}10%,85%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(10px)}}
@@ -326,7 +353,11 @@ h1{font-size:19px}.brand .sub{display:none}
 <div class="machine-wrap">
 <div class="machine" id="machineArea">
 <div class="machine-bubble" id="machinePreview"></div>
-<div class="machine-note" id="machineNote">오늘도 귀여움 대폭발 준비 완료!</div>
+<div class="inline-results" id="inlineResults" aria-live="polite">
+  <div class="inline-results-head"><b id="resultTitle">뽑기 결과</b><span id="resultSub">새 친구를 만났어요!</span></div>
+  <div class="result-grid" id="resultGrid"></div>
+  </div>
+  <div class="machine-note" id="machineNote">오늘도 귀여움 대폭발 준비 완료!</div>
 </div>
 </div>
 <div class="summon-box">
@@ -395,22 +426,6 @@ h1{font-size:19px}.brand .sub{display:none}
           </div>
 </div>
 </section><section class="panel admin-gate" data-view="admin" id="adminGate"><div class="panel-body"><div class="panel-title"><h2>👑 운영자 메뉴</h2></div><p>운영자 기능은 로그인 후 사용할 수 있습니다. 상단의 <b>운영자 로그인</b> 버튼을 눌러 인증하세요.</p><button class="btn dark" id="adminGateLogin" type="button">운영자 로그인</button></div></section></main>
-</div>
-<div aria-hidden="true" class="modal" id="resultModal">
-<div class="modal-card">
-<div class="modal-head">
-<div>
-<h3 id="resultTitle" style="margin:0">뽑기 결과</h3>
-<div class="tiny" id="resultSub">새 친구를 만났어요!</div>
-</div>
-<button class="btn ghost" id="closeModalBtn">닫기</button>
-</div>
-<div class="result-grid" id="resultGrid"></div>
-<div class="result-retry-actions" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;position:sticky;bottom:-18px;padding:14px 2px 2px;background:#fff">
-<button class="btn secondary" id="resultAgainOne" type="button">🎰 1회 더 뽑기</button>
-<button class="btn" id="resultAgainTen" type="button">✨ 10회 더 뽑기</button>
-</div><div class="tiny" id="resultRemaining" style="text-align:center;margin-top:7px"></div>
-</div>
 </div>
 <div class="toast-wrap" id="toastWrap"></div>
 <script>
@@ -654,7 +669,6 @@ h1{font-size:19px}.brand .sub{display:none}
     const user = currentUser();
     if(!user){ toast('먼저 접속자를 생성하거나 불러와 주세요.'); return; }
     if(busy) return;
-    if($('resultModal').classList.contains('show')) closeModal();
     if(remainingTotal(user) < amount){ toast('오늘 가능한 뽑기권이 부족합니다.'); return; }
     busy = true;
     consumeTickets(user, amount);
@@ -701,14 +715,9 @@ h1{font-size:19px}.brand .sub{display:none}
         <div class="meta"><span>보유 x${ownedCount(user, r.key)}</span><span>강화 +${enhanceLevel(user, r.key)}</span></div>
       </div>`;
     }).join('');
-    $('resultModal').classList.add('show');
-    $('resultModal').setAttribute('aria-hidden','false');
-    const left = remainingTotal(currentUser());
-    $('resultRemaining').textContent = '남은 뽑기권: ' + left + '회';
-    $('resultAgainOne').disabled = left < 1;
-    $('resultAgainTen').disabled = left < 10;
+    $('inlineResults').classList.add('active');
+    $('inlineResults').classList.toggle('single-view',single);
   }
-  function closeModal(){ $('resultModal').classList.remove('show'); $('resultModal').setAttribute('aria-hidden','true'); }
 
   function selectItem(key){ selectedItemKey = key; renderCollection(); renderEnhance(); switchTab('enhance'); }
 
@@ -864,10 +873,6 @@ h1{font-size:19px}.brand .sub{display:none}
   $('userSelect').addEventListener('change', e => { if(e.target.value) makeOrSwitchUser(e.target.value, '', false); });
   $('drawOneBtn').addEventListener('click', () => doDraw(1));
   $('drawTenBtn').addEventListener('click', () => doDraw(10));
-  $('closeModalBtn').addEventListener('click', closeModal);
-  $('resultAgainOne').addEventListener('click', () => { closeModal(); doDraw(1); });
-  $('resultAgainTen').addEventListener('click', () => { closeModal(); doDraw(10); });
-  $('resultModal').addEventListener('click', e => { if(e.target === $('resultModal')) closeModal(); });
   $('rarityFilters').addEventListener('click', e => { const btn = e.target.closest('button[data-filter]'); if(!btn) return; currentFilter = btn.dataset.filter; renderCollection(); });
   $('collectionGrid').addEventListener('click', e => { const card = e.target.closest('[data-key]'); if(!card) return; selectItem(card.dataset.key); });
   $('enhanceBtn').addEventListener('click', enhanceOnce);
