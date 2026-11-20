@@ -414,14 +414,14 @@ h1{font-size:19px}.brand .sub{display:none}
   const STORE_KEY = 'chiikawa_chaos_gacha_v2';
   const ADMIN_PASSWORD = 'PLUVA-ADMIN';
   const RARITIES = [
-    {key:'normal', label:'일반', color:'#98a1b3', rate:42, aura:'#f1f3f8', dress:'#dce2ee', effect:'기본 코스튬'},
-    {key:'rare', label:'레어', color:'#58b8ff', rate:24, aura:'#e1f3ff', dress:'#b4e2ff', effect:'리본·머플러 효과'},
-    {key:'super', label:'초레어', color:'#8d72ff', rate:14, aura:'#ece7ff', dress:'#c9bdff', effect:'망토·별가루 효과'},
-    {key:'legend', label:'전설', color:'#f4b12c', rate:8, aura:'#fff3d4', dress:'#ffd57b', effect:'왕관·황금 스파크'},
+    {key:'normal', label:'일반', color:'#98a1b3', rate:1.25, aura:'#f1f3f8', dress:'#dce2ee', effect:'기본 코스튬'},
+    {key:'rare', label:'레어', color:'#58b8ff', rate:0.27, aura:'#e1f3ff', dress:'#b4e2ff', effect:'리본·머플러 효과'},
+    {key:'super', label:'초레어', color:'#8d72ff', rate:12, aura:'#ece7ff', dress:'#c9bdff', effect:'망토·별가루 효과'},
+    {key:'legend', label:'전설', color:'#f4b12c', rate:4, aura:'#fff3d4', dress:'#ffd57b', effect:'왕관·황금 스파크'},
     {key:'myth', label:'신화', color:'#ff72b1', rate:5, aura:'#ffe3f0', dress:'#ffb2d3', effect:'날개·후광 연출'},
-    {key:'ruin', label:'파멸', color:'#7b4bff', rate:3, aura:'#efe6ff', dress:'#b799ff', effect:'어둠 불꽃·뿔'},
+    {key:'ruin', label:'파멸', color:'#7b4bff', rate:0.5, aura:'#efe6ff', dress:'#b799ff', effect:'어둠 불꽃·뿔'},
     {key:'order', label:'질서', color:'#53d2c6', rate:2, aura:'#e5fffb', dress:'#a9f1e9', effect:'룬·기하학 오오라'},
-    {key:'chaos', label:'혼돈', color:'#ff6d6d', rate:2, aura:'#ffe3e3', dress:'#ffb3b3', effect:'균열·혼돈 파편'}
+    {key:'chaos', label:'혼돈', color:'#ff6d6d', rate:0.1, aura:'#ffe3e3', dress:'#ffb3b3', effect:'균열·혼돈 파편'}
   ];
   const FILTERS = ['all', ...RARITIES.map(r=>r.key)];
   const CHARACTERS = [
@@ -565,9 +565,20 @@ h1{font-size:19px}.brand .sub{display:none}
     $('rateList').innerHTML = RARITIES.map(r=>`
       <div class="rarity-row">
         <div class="tag" style="background:${r.color}">${r.label}</div>
-        <div class="bar"><span style="width:${r.rate}%;background:${r.color}"></span></div>
+        <div class="bar"><span style="width:${Math.max(1.5,r.rate)}%;background:${r.color}"></span></div>
         <div style="text-align:right">${r.rate}%</div>
       </div>`).join('');
+  }
+
+  // Reuse each source bitmap via a short object URL rather than embedding base64 in every card.
+  const imageURL = {};
+  for (const [id, data] of Object.entries(ORIGINAL_CHARACTER_IMAGES)) {
+    try {
+      const raw = atob(data.slice(data.indexOf(',')+1));
+      const bytes = new Uint8Array(raw.length);
+      for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+      imageURL[id] = URL.createObjectURL(new Blob([bytes], {type:'image/png'}));
+    } catch (err) { imageURL[id] = data; }
   }
 
   function drawSvg(itemKey, opts={}){
@@ -589,13 +600,32 @@ h1{font-size:19px}.brand .sub{display:none}
     const cape = item.rarity==='super' ? '<path d="M47 140Q91 163 133 140L144 168Q90 186 36 168Z" fill="#b5a3ff" fill-opacity=".83" stroke="#7c6fc5" stroke-width="2"/>' : '';
     const wings = item.rarity==='myth' ? '<path d="M36 105Q3 54 14 115Q2 125 40 132M144 105Q177 54 166 115Q178 125 140 132" fill="#ffd2e9" stroke="#e77aa9" stroke-width="2" opacity=".87"/>' : '';
     const outerGlow = phase >= 5 ? `<rect x="3" y="3" width="174" height="174" rx="24" fill="none" stroke="${rr.color}" stroke-opacity=".8" stroke-width="${phase >= 10 ? 7 : 3}"/>` : '';
-    const source = ORIGINAL_CHARACTER_IMAGES[item.charId];
+    // Each tier has its own obvious outfit silhouette, frame, and atmospheric effect.
+    const tierNo = RARITIES.findIndex(r=>r.key===item.rarity);
+    const costumes = {
+      normal: '',
+      rare: '<path d="M53 129Q90 151 127 129L131 158Q89 177 49 158Z" fill="#bce9ff" stroke="#599bc8" stroke-width="2"/><path d="M90 135l-12 12 12 9 12-9z" fill="#ff85b8"/>',
+      super: '<path d="M42 127Q90 152 138 127L154 174H26Z" fill="#9376e8" stroke="#6541ab" stroke-width="3"/><path d="M81 138l9 20 9-20" fill="#ffe0a1"/><path d="M66 39l24-17 24 17" fill="none" stroke="#ae8eff" stroke-width="7"/>',
+      legend: '<path d="M40 121L55 138 90 124 125 138 140 121 150 170H30Z" fill="#f1bf48" stroke="#a9791e" stroke-width="4"/><path d="M54 32 65 11 81 26 90 7 102 26 118 11 126 32 121 43H60Z" fill="#ffdc59" stroke="#ad7422" stroke-width="3"/><circle cx="90" cy="33" r="5" fill="#f76e91"/>',
+      myth: '<path d="M31 116Q0 73 19 48Q43 64 51 108M149 116Q180 73 161 48Q137 64 129 108" fill="#fff7fb" stroke="#ff66ad" stroke-width="4"/><path d="M42 128Q90 154 138 128L147 173H33Z" fill="#ff9ccf" stroke="#f35a9c" stroke-width="3"/><ellipse cx="90" cy="18" rx="45" ry="10" fill="none" stroke="#ff66ab" stroke-width="6"/>',
+      ruin: '<path d="M37 130Q90 151 143 130L156 173H24Z" fill="#432066" stroke="#9b63ff" stroke-width="4"/><path d="M40 63 25 13 70 49M140 63 155 13 110 49" fill="#7040b9" stroke="#26113b" stroke-width="4"/><path d="M23 143Q10 125 27 104Q31 120 42 108M157 143Q170 125 153 104Q149 120 138 108" fill="#9f46fc" stroke="#541b91" stroke-width="3"/>',
+      order: '<path d="M33 126L90 142 147 126 143 171H37Z" fill="#9df4e4" stroke="#34bda7" stroke-width="4"/><path d="M90 5 109 33 90 60 71 33Z" fill="#d5fff7" stroke="#2cb9a5" stroke-width="4"/><path d="M90 11v44M72 33h36" stroke="#2cb9a5" stroke-width="3"/><path d="M20 85 36 62 52 85 36 108ZM128 85 144 62 160 85 144 108Z" fill="none" stroke="#38dac9" stroke-width="4"/>',
+      chaos: '<path d="M31 125Q90 150 149 125L153 175H27Z" fill="#302248" stroke="#ff5a78" stroke-width="5"/><path d="M40 61 20 18 68 48M140 61 160 18 112 48" fill="#f34d72" stroke="#27193a" stroke-width="4"/><path d="M6 16 37 57 19 96 42 128M174 16 142 57 161 96 138 128" stroke="#ee5477" fill="none" stroke-width="6"/><path d="M76 138l14 12 14-12-14 33z" fill="#ffb137"/>'
+    };
+    const tierFrame = tierNo>=3 ? `<rect x="3" y="3" width="174" height="174" rx="22" fill="none" stroke="${rr.color}" stroke-width="${tierNo>=5?8:5}"/>` : '';
+    const tierAura = tierNo>=3 ? Array.from({length:tierNo*2+2},(_,i)=>{
+      const angle = (i*360/(tierNo*2+2))*Math.PI/180;
+      const x=Math.round(90+69*Math.cos(angle)), y=Math.round(89+69*Math.sin(angle));
+      return `<text x="${x}" y="${y}" text-anchor="middle" font-size="${tierNo>=5?17:12}" fill="${rr.color}" opacity=".85">✦</text>`;
+    }).join('') : '';
+    const gradeMark = tierNo>=3 ? `<rect x="53" y="155" width="74" height="20" rx="10" fill="${rr.color}"/><text x="90" y="169" text-anchor="middle" font-size="11" font-weight="900" fill="#fff">${rr.label}</text>` : '';
+    const source = imageURL[item.charId];
     return `<svg viewBox="0 0 180 180" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <rect width="180" height="180" rx="23" fill="${rr.aura}"/>
-      <circle cx="90" cy="91" r="75" fill="${rr.color}" opacity=".07"/>
-      ${wings}${rings}${stars}${horns}${order}${chaos}
+      <rect width="180" height="180" rx="23" fill="${tierNo>=5 ? '#211933' : rr.aura}"/>
+      <circle cx="90" cy="91" r="75" fill="${rr.color}" opacity="${tierNo>=3 ? '.34' : '.09'}"/>
+      ${wings}${rings}${stars}${tierAura}
       <image href="${source}" x="26" y="27" width="128" height="134" preserveAspectRatio="xMidYMid meet"/>
-      ${ribbon}${cape}${crown}${halo}${outerGlow}
+      ${costumes[item.rarity]}${tierFrame}${gradeMark}${outerGlow}
       ${phase>=10?'<text x="90" y="173" text-anchor="middle" font-size="10" font-weight="900" fill="#8c5d2a">MAX +100</text>':''}
     </svg>`;
   }
@@ -639,13 +669,12 @@ h1{font-size:19px}.brand .sub{display:none}
     }
     user.history = user.history.slice(0, 20);
     saveState();
-    renderAll();
-    $('machineNote').textContent = amount === 10 ? '10연속 폭발! 행운이 몰아친다!' : '귀여움 캡슐 오픈 중!';
-    setTimeout(() => {
-      busy = false;
-      $('machineNote').textContent = '오늘도 귀여움 대폭발 준비 완료!';
-      openResults(results);
-    }, 420);
+    renderStats();
+    $('machineNote').textContent = '✨ 뽑기 결과 확인!';
+    // Reveal immediately; no 420 ms delay or 64-card redraw per pull.
+    openResults(results);
+    busy = false;
+    renderStats();
   }
 
   function openResults(results){
@@ -811,7 +840,11 @@ h1{font-size:19px}.brand .sub{display:none}
 
   function renderAll(){
     const user = currentUser(); ensureUser(user);
-    renderUserSelect(); renderRateList(); renderStats(); renderCollection(); renderEnhance(); renderHistory(); renderMachinePreview(); saveState();
+    renderUserSelect(); renderRateList(); renderStats(); renderMachinePreview();
+    if (activeTab === 'collection') renderCollection();
+    if (activeTab === 'enhance') renderEnhance();
+    if (activeTab === 'history') renderHistory();
+    saveState();
   }
 
   $('createUserBtn').addEventListener('click', () => makeOrSwitchUser($('userIdInput').value, $('userNameInput').value, true));
@@ -868,6 +901,11 @@ h1{font-size:19px}.brand .sub{display:none}
       view.classList.toggle('active',view.dataset.view === tab);
     });
     syncAdminGate();
+    if (tab === 'collection') renderCollection();
+    if (tab === 'enhance') renderEnhance();
+    if (tab === 'history') renderHistory();
+    if (tab === 'users') renderUserSelect();
+    if (tab === 'admin') renderAdminUserList();
     window.scrollTo({top:0, behavior:'instant'});
   }
   function renderFullscreen(){
