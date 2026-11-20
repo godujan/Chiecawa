@@ -306,6 +306,42 @@ h1{font-size:19px}.brand .sub{display:none}
  .tab-view[data-view="main"] .summon-box{padding:5px}
 }
 
+
+.enhance-picker{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;padding:10px;background:#faf8ff;border:1px solid var(--line);border-radius:14px}
+.enhance-picker label{font-size:13px;font-weight:900}
+.enhance-picker select{width:100%;min-width:0;border:1px solid var(--line);background:#fff;padding:10px;border-radius:10px;color:var(--ink);font-weight:800}
+.tab-view[data-view="enhance"]>.panel-body{display:flex;flex-direction:column;gap:9px}
+.tab-view[data-view="enhance"] .panel-title{margin:0}
+.tab-view[data-view="enhance"] .enhance-layout{flex:1;min-height:0;gap:10px}
+.tab-view[data-view="enhance"] .focus-art{height:clamp(150px,30dvh,300px)}
+.tab-view[data-view="enhance"] .enhance-controls{gap:8px}
+.tab-view[data-view="enhance"] .big-prob{padding:10px}
+.tab-view[data-view="enhance"] .big-prob strong{font-size:21px}
+.tab-view[data-view="enhance"] .effects-list{margin-top:0;display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.tab-view[data-view="enhance"] .effect-item{display:grid;gap:2px;padding:8px;font-size:11px}
+@media(max-width:950px) and (min-width:641px){.tab-view[data-view="enhance"] .enhance-layout{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+@media(max-width:640px){
+ .tab-view[data-view="enhance"]>.panel-body{gap:6px;padding:9px}
+ .tab-view[data-view="enhance"] .panel-title h2{font-size:18px}
+ .tab-view[data-view="enhance"] .panel-title .tiny{font-size:10px}
+ .enhance-picker{grid-template-columns:auto minmax(0,1fr);padding:7px;gap:6px}
+ .enhance-picker label{font-size:11px}
+ .enhance-picker select{padding:7px;font-size:12px}
+ .enhance-picker .tiny{display:none}
+ .tab-view[data-view="enhance"] .enhance-layout{grid-template-columns:1fr;flex:none;gap:7px}
+ .tab-view[data-view="enhance"] .focus-card{display:grid;grid-template-columns:105px minmax(0,1fr);grid-template-rows:auto auto auto;gap:4px 9px;padding:8px;border-radius:14px}
+ .tab-view[data-view="enhance"] .focus-art{grid-row:1 / 4;grid-column:1;height:105px;min-height:0;width:105px}
+ .tab-view[data-view="enhance"] .level{grid-column:2;margin:0;font-size:12px}
+ .tab-view[data-view="enhance"] .level strong{font-size:20px}
+ .tab-view[data-view="enhance"] .progress{grid-column:2;height:8px}
+ .tab-view[data-view="enhance"] #focusMilestone{grid-column:2;font-size:10px;margin:0!important}
+ .tab-view[data-view="enhance"] .enhance-controls{grid-template-columns:1fr 1fr;gap:6px;display:grid}
+ .tab-view[data-view="enhance"] .big-prob{grid-column:1 / -1;display:flex;justify-content:space-between;align-items:center;font-size:11px;padding:8px}
+ .tab-view[data-view="enhance"] .big-prob strong{font-size:15px;margin:0}
+ .tab-view[data-view="enhance"] .enhance-controls .btn{padding:12px 6px;font-size:12px}
+ .tab-view[data-view="enhance"] .notice{grid-column:1 / -1;font-size:11px;padding:8px;line-height:1.3}
+ .tab-view[data-view="enhance"] .effects-list{grid-column:1 / -1}
+}
 </style>
 <link rel="manifest" href="./manifest.webmanifest">
 <meta name="theme-color" content="#fff4fa">
@@ -385,6 +421,7 @@ h1{font-size:19px}.brand .sub{display:none}
 </section><section class="panel tab-view" data-view="enhance">
 <div class="panel-body">
 <div class="panel-title"><h2>강화 화면</h2><span class="tiny">성공 90% · 실패 10% · 실패 시 단계 유지</span></div>
+<div class="enhance-picker"><label for="enhanceSelect">강화 대상</label><select id="enhanceSelect"></select><span class="tiny" id="enhanceOwnedSummary"></span></div>
 <div class="enhance-layout">
 <div class="focus-card">
 <div class="focus-art" id="focusArt"></div>
@@ -393,7 +430,7 @@ h1{font-size:19px}.brand .sub{display:none}
 <div class="tiny" id="focusMilestone" style="margin-top:8px">10강 단위로 연출이 진화합니다</div>
 </div>
 <div class="enhance-controls">
-<div class="big-prob">강화 확률<strong>성공 90% / 실패 10%</strong><span class="tiny">매 시도마다 동일 확률 적용</span></div>
+<div class="big-prob">강화 확률<strong>성공 90% · 실패 10%</strong></div>
 <button class="btn secondary" id="enhanceBtn">강화 시도</button>
 <button class="btn ghost" id="enhanceTenBtn">10회 연속 강화</button>
 <div class="notice" id="enhanceResult">카드를 선택하면 현재 강화 단계와 10강 단위 효과를 볼 수 있습니다.</div>
@@ -719,7 +756,7 @@ h1{font-size:19px}.brand .sub{display:none}
     $('inlineResults').classList.toggle('single-view',single);
   }
 
-  function selectItem(key){ selectedItemKey = key; renderCollection(); renderEnhance(); switchTab('enhance'); }
+  function selectItem(key){ selectedItemKey = key; switchTab('enhance'); }
 
   function enhanceOnce(){
     const user = currentUser();
@@ -778,6 +815,15 @@ h1{font-size:19px}.brand .sub{display:none}
 
   function renderEnhance(){
     const user = currentUser();
+    const owned = user ? ITEMS.filter(i=>ownedCount(user,i.key)>0) : [];
+    if(selectedItemKey&&!owned.some(i=>i.key===selectedItemKey)) selectedItemKey=null;
+    if(!selectedItemKey&&owned.length) selectedItemKey=owned[0].key;
+    const picker=$('enhanceSelect');
+    picker.innerHTML=owned.length ? owned.map(i=>`<option value="${i.key}" ${selectedItemKey===i.key?'selected':''}>${i.name} · ${rarityMap[i.rarity].label} (+${enhanceLevel(user,i.key)})</option>`).join('') : '<option value="">보유 캐릭터 없음</option>';
+    picker.disabled=!owned.length;
+    $('enhanceOwnedSummary').textContent=`보유 ${owned.length}종`;
+    $('enhanceBtn').disabled=!selectedItemKey||enhanceLevel(user,selectedItemKey)>=100;
+    $('enhanceTenBtn').disabled=!selectedItemKey||enhanceLevel(user,selectedItemKey)>=100;
     if(!selectedItemKey){
       $('focusArt').innerHTML = drawSvg('chiikawa__normal',{level:0});
       $('focusLabel').textContent = '강화할 카드를 선택하세요';
@@ -795,10 +841,11 @@ h1{font-size:19px}.brand .sub{display:none}
       $('focusMilestone').textContent = milestoneEffectName(level);
       $('selectedCardName').textContent = `${item.name} / ${rarityMap[item.rarity].label}`;
     }
-    $('milestoneList').innerHTML = MILESTONES.map(m => {
-      const lv = selectedItemKey ? enhanceLevel(user, selectedItemKey) : 0;
-      return `<div class="effect-item ${lv >= m.lv ? 'on' : ''}"><span><b>+${m.lv}</b> ${m.name}</span><span>${m.desc}</span></div>`;
-    }).join('');
+    const lv=selectedItemKey?enhanceLevel(user,selectedItemKey):0;
+    const current=[...MILESTONES].reverse().find(m=>m.lv<=lv);
+    const next=MILESTONES.find(m=>m.lv>lv);
+    $('milestoneList').innerHTML=`<div class="effect-item ${current?'on':''}"><b>현재 효과</b><span>${current?'+'+current.lv+' '+current.name:'기본 효과'}</span></div>`+
+      `<div class="effect-item"><b>다음 각성</b><span>${next?'+'+next.lv+' '+next.name:'최대 강화 완료'}</span></div>`;
   }
 
   function renderHistory(){
@@ -875,6 +922,7 @@ h1{font-size:19px}.brand .sub{display:none}
   $('drawTenBtn').addEventListener('click', () => doDraw(10));
   $('rarityFilters').addEventListener('click', e => { const btn = e.target.closest('button[data-filter]'); if(!btn) return; currentFilter = btn.dataset.filter; renderCollection(); });
   $('collectionGrid').addEventListener('click', e => { const card = e.target.closest('[data-key]'); if(!card) return; selectItem(card.dataset.key); });
+  $('enhanceSelect').addEventListener('change',e=>{selectedItemKey=e.target.value||null;renderEnhance();$('enhanceResult').textContent='강화 대상 선택 완료';});
   $('enhanceBtn').addEventListener('click', enhanceOnce);
   $('enhanceTenBtn').addEventListener('click', () => enhanceMany(10));
   $('adminLoginBtn').addEventListener('click', () => {
