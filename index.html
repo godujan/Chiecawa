@@ -431,7 +431,7 @@ h1{font-size:19px}.brand .sub{display:none}
 <script>
 (() => {
   const STORE_KEY = 'chiikawa_chaos_gacha_v2';
-  const ADMIN_PASSWORD = 'PLUVA-ADMIN';
+  const ADMIN_PASSWORD = 'WkdwldnsWkd93';
   const RARITIES = [
     {key:'normal', label:'일반', color:'#98a1b3', rate:55, aura:'#f1f3f8', dress:'#dce2ee', effect:'기본 코스튬'},
     {key:'rare', label:'레어', color:'#58b8ff', rate:27, aura:'#e1f3ff', dress:'#b4e2ff', effect:'리본·머플러 효과'},
@@ -493,14 +493,14 @@ h1{font-size:19px}.brand .sub{display:none}
         const parsed = JSON.parse(raw);
         parsed.users ||= {};
         parsed.currentUserId ||= '';
-        parsed.adminUnlocked ||= false;
+        parsed.adminUnlocked = false;
         parsed.grantLog ||= [];
         return parsed;
       }
     } catch(e){}
     return {users:{}, currentUserId:'', adminUnlocked:false, grantLog:[]};
   }
-  function saveState(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+  function saveState(){ const snapshot={...state,adminUnlocked:false}; localStorage.setItem(STORE_KEY, JSON.stringify(snapshot)); }
   function makeUser(id,name){
     return {
       id, name:name||id, createdAt:Date.now(), lastReset:today(), dailyUsed:0, bonusTickets:0,
@@ -878,9 +878,9 @@ h1{font-size:19px}.brand .sub{display:none}
   $('enhanceBtn').addEventListener('click', enhanceOnce);
   $('enhanceTenBtn').addEventListener('click', () => enhanceMany(10));
   $('adminLoginBtn').addEventListener('click', () => {
-    if(state.adminUnlocked){ state.adminUnlocked = false; saveState(); renderAll(); toast('운영자 로그아웃'); return; }
-    const pw = prompt('운영자 비밀번호를 입력하세요.\n기본값: PLUVA-ADMIN');
-    if(pw === ADMIN_PASSWORD){ state.adminUnlocked = true; saveState(); renderAll(); toast('운영자 권한 활성화!'); }
+    if(state.adminUnlocked){ state.adminUnlocked = false; renderAll(); toast('운영자 로그아웃'); return; }
+    const pw = prompt('운영자 비밀번호를 입력하세요.');
+    if(pw === ADMIN_PASSWORD){ state.adminUnlocked = true; renderAll(); toast('운영자 권한 활성화!'); }
     else if(pw !== null) toast('비밀번호가 올바르지 않습니다.');
   });
   $('grantBtn').addEventListener('click', () => {
