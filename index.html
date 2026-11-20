@@ -406,6 +406,10 @@ h1{font-size:19px}.brand .sub{display:none}
 <button class="btn ghost" id="closeModalBtn">닫기</button>
 </div>
 <div class="result-grid" id="resultGrid"></div>
+<div class="result-retry-actions" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;position:sticky;bottom:-18px;padding:14px 2px 2px;background:#fff">
+<button class="btn secondary" id="resultAgainOne" type="button">🎰 1회 더 뽑기</button>
+<button class="btn" id="resultAgainTen" type="button">✨ 10회 더 뽑기</button>
+</div><div class="tiny" id="resultRemaining" style="text-align:center;margin-top:7px"></div>
 </div>
 </div>
 <div class="toast-wrap" id="toastWrap"></div>
@@ -414,13 +418,13 @@ h1{font-size:19px}.brand .sub{display:none}
   const STORE_KEY = 'chiikawa_chaos_gacha_v2';
   const ADMIN_PASSWORD = 'PLUVA-ADMIN';
   const RARITIES = [
-    {key:'normal', label:'일반', color:'#98a1b3', rate:1.25, aura:'#f1f3f8', dress:'#dce2ee', effect:'기본 코스튬'},
-    {key:'rare', label:'레어', color:'#58b8ff', rate:0.27, aura:'#e1f3ff', dress:'#b4e2ff', effect:'리본·머플러 효과'},
+    {key:'normal', label:'일반', color:'#98a1b3', rate:55, aura:'#f1f3f8', dress:'#dce2ee', effect:'기본 코스튬'},
+    {key:'rare', label:'레어', color:'#58b8ff', rate:27, aura:'#e1f3ff', dress:'#b4e2ff', effect:'리본·머플러 효과'},
     {key:'super', label:'초레어', color:'#8d72ff', rate:12, aura:'#ece7ff', dress:'#c9bdff', effect:'망토·별가루 효과'},
     {key:'legend', label:'전설', color:'#f4b12c', rate:4, aura:'#fff3d4', dress:'#ffd57b', effect:'왕관·황금 스파크'},
-    {key:'myth', label:'신화', color:'#ff72b1', rate:5, aura:'#ffe3f0', dress:'#ffb2d3', effect:'날개·후광 연출'},
+    {key:'myth', label:'신화', color:'#ff72b1', rate:1.2, aura:'#ffe3f0', dress:'#ffb2d3', effect:'날개·후광 연출'},
     {key:'ruin', label:'파멸', color:'#7b4bff', rate:0.5, aura:'#efe6ff', dress:'#b799ff', effect:'어둠 불꽃·뿔'},
-    {key:'order', label:'질서', color:'#53d2c6', rate:2, aura:'#e5fffb', dress:'#a9f1e9', effect:'룬·기하학 오오라'},
+    {key:'order', label:'질서', color:'#53d2c6', rate:0.2, aura:'#e5fffb', dress:'#a9f1e9', effect:'룬·기하학 오오라'},
     {key:'chaos', label:'혼돈', color:'#ff6d6d', rate:0.1, aura:'#ffe3e3', dress:'#ffb3b3', effect:'균열·혼돈 파편'}
   ];
   const FILTERS = ['all', ...RARITIES.map(r=>r.key)];
@@ -650,6 +654,7 @@ h1{font-size:19px}.brand .sub{display:none}
     const user = currentUser();
     if(!user){ toast('먼저 접속자를 생성하거나 불러와 주세요.'); return; }
     if(busy) return;
+    if($('resultModal').classList.contains('show')) closeModal();
     if(remainingTotal(user) < amount){ toast('오늘 가능한 뽑기권이 부족합니다.'); return; }
     busy = true;
     consumeTickets(user, amount);
@@ -669,12 +674,11 @@ h1{font-size:19px}.brand .sub{display:none}
     }
     user.history = user.history.slice(0, 20);
     saveState();
-    renderStats();
-    $('machineNote').textContent = '✨ 뽑기 결과 확인!';
-    // Reveal immediately; no 420 ms delay or 64-card redraw per pull.
-    openResults(results);
     busy = false;
     renderStats();
+    $('machineNote').textContent = '✨ 뽑기 결과 확인!';
+    // No full collection repaint or artificial delay on each roll.
+    openResults(results);
   }
 
   function openResults(results){
@@ -699,6 +703,10 @@ h1{font-size:19px}.brand .sub{display:none}
     }).join('');
     $('resultModal').classList.add('show');
     $('resultModal').setAttribute('aria-hidden','false');
+    const left = remainingTotal(currentUser());
+    $('resultRemaining').textContent = '남은 뽑기권: ' + left + '회';
+    $('resultAgainOne').disabled = left < 1;
+    $('resultAgainTen').disabled = left < 10;
   }
   function closeModal(){ $('resultModal').classList.remove('show'); $('resultModal').setAttribute('aria-hidden','true'); }
 
@@ -857,6 +865,8 @@ h1{font-size:19px}.brand .sub{display:none}
   $('drawOneBtn').addEventListener('click', () => doDraw(1));
   $('drawTenBtn').addEventListener('click', () => doDraw(10));
   $('closeModalBtn').addEventListener('click', closeModal);
+  $('resultAgainOne').addEventListener('click', () => { closeModal(); doDraw(1); });
+  $('resultAgainTen').addEventListener('click', () => { closeModal(); doDraw(10); });
   $('resultModal').addEventListener('click', e => { if(e.target === $('resultModal')) closeModal(); });
   $('rarityFilters').addEventListener('click', e => { const btn = e.target.closest('button[data-filter]'); if(!btn) return; currentFilter = btn.dataset.filter; renderCollection(); });
   $('collectionGrid').addEventListener('click', e => { const card = e.target.closest('[data-key]'); if(!card) return; selectItem(card.dataset.key); });
